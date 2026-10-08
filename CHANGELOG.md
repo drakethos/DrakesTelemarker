@@ -1,0 +1,5 @@
+- Version 0.1.0
+  - Initial release.
+  - Per-world console bookmarks (10 slots) to save and recall positions.
+  - Requires devcommands (soft dependency on Server Devcommands).
+  - Minimap markers for saved slots.

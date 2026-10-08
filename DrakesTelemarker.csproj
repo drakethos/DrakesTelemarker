@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!-- Ensures Jotunn Paths.props can resolve Environment.props without a .sln; avoids duplicating imports (MSB4011). -->
+    <SolutionDir Condition="'$(SolutionDir)' == '' OR '$(SolutionDir)' == '*Undefined*'">$(MSBuildProjectDirectory)\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="packages\JotunnLib.2.26.1\build\JotunnLib.props" Condition="Exists('packages\JotunnLib.2.26.1\build\JotunnLib.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{5DF97E86-BF46-46C5-894F-6B2D80EA6645}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DrakesTelemarker</RootNamespace>
+    <AssemblyName>DrakesTelemarker</AssemblyName>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExPath)\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="assembly_guiutils">
+      <HintPath>$(PublicizedAssembliesPath)\assembly_guiutils_publicized.dll</HintPath>
+    </Reference>
+    <Reference Include="assembly_utils">
+      <HintPath>$(PublicizedAssembliesPath)\assembly_utils_publicized.dll</HintPath>
+    </Reference>
+    <Reference Include="assembly_valheim">
+      <HintPath>$(PublicizedAssembliesPath)\assembly_valheim_publicized.dll</HintPath>
+    </Reference>
+    <Reference Include="Jotunn, Version=2.26.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\JotunnLib.2.26.1\lib\net462\Jotunn.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="UnityEngine">
+      <HintPath>$(CorlibPath)\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(CorlibPath)\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(CorlibPath)\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(CorlibPath)\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(CorlibPath)\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="Splatform">
+      <HintPath>$(CorlibPath)\Splatform.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DrakesTelemarker.cs" />
+    <Compile Include="TelemarkerClearDialog.cs" />
+    <Compile Include="TelemarkerMinimap.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them. For more information, see http://go.microsoft.com/fwlink/?LinkID=322105.The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\JotunnLib.2.26.1\build\JotunnLib.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\JotunnLib.2.26.1\build\JotunnLib.props'))" />
+  </Target>
+  <Target Name="PackageMod" AfterTargets="Build" DependsOnTargets="ResolveThunderstorePaths;WriteThunderstoreManifest" Condition="'$(SkipPackageMod)' != 'true'">
+    <MakeDir Directories="$(ThunderstoreFolder)" />
+    <Copy SourceFiles="$(TargetDir)$(TargetFileName)" DestinationFolder="$(ThunderstoreFolder)" />
+    <Copy SourceFiles="$(TargetDir)README.md" DestinationFiles="$(ThunderstoreFolder)\README.md" Condition="Exists('$(TargetDir)README.md')" />
+    <Copy SourceFiles="$(TargetDir)icon.png" DestinationFiles="$(ThunderstoreFolder)\icon.png" Condition="Exists('$(TargetDir)icon.png')" />
+    <Copy SourceFiles="$(TargetDir)CHANGELOG.md" DestinationFiles="$(ThunderstoreFolder)\CHANGELOG.md" Condition="Exists('$(TargetDir)CHANGELOG.md')" />
+    <!-- Zip with forward slashes (Thunderstore / unix). Compress-Archive uses backslashes and Gale flattens folders. -->
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PosixZipScript)&quot; -SourceDir &quot;$(ThunderstoreFolder)&quot; -ZipPath &quot;$(ZipOutput)&quot;" Condition="'$(CI_SKIP_POST_BUILD)' == '' and '$(PosixZipScript)' != '' and Exists('$(PosixZipScript)')" />
+  </Target>
+  <ItemGroup>
+    <Content Include="CHANGELOG.md">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="README.md">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

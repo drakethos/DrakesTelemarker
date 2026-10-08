@@ -1,0 +1,19 @@
+<Project>
+  <!-- environment.props is loaded by Jotunn Paths.props via SolutionDir (before Directory.Build continues). Do not Import it again here. -->
+  <Import Project="$(MSBuildThisFileDirectory)mod.package.props" Condition="Exists('$(MSBuildThisFileDirectory)mod.package.props')" />
+  <!-- CI checks out this repo alone — use NuGet net48 reference assemblies. -->
+  <PropertyGroup Condition="'$(CI_NET48_FWPATH)' != ''">
+    <TargetFrameworkRootPath>$(CI_NET48_FWPATH)/</TargetFrameworkRootPath>
+  </PropertyGroup>
+  <Import Project="$(CI_NET48_FWPATH)/Microsoft.NETFramework.ReferenceAssemblies.net48.targets"
+          Condition="'$(CI_NET48_FWPATH)' != '' and Exists('$(CI_NET48_FWPATH)/Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" />
+  <!-- Written against the live Valheim 1.0 API (ZNet.GetUID is static, Minimap.AddPin takes 7 args).
+       The Pfhoenix CI stubs are pre-1.0 and do not compile it, so compile against the live publicized assemblies. -->
+  <PropertyGroup>
+    <UseCiValheimRefs>false</UseCiValheimRefs>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DrakeModBuildRoot Condition="Exists('$(MSBuildThisFileDirectory)build\DrakeMod.Build.props')">$(MSBuildThisFileDirectory)build\</DrakeModBuildRoot>
+  </PropertyGroup>
+  <Import Project="$(DrakeModBuildRoot)DrakeMod.Build.props" Condition="'$(DrakeModBuildRoot)' != ''" />
+</Project>

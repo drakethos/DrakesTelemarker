@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <DrakeModBuildRoot Condition="Exists('$(MSBuildThisFileDirectory)..\build\DrakeMod.Build.targets')">$(MSBuildThisFileDirectory)..\build\</DrakeModBuildRoot>
+    <DrakeModBuildRoot Condition="'$(DrakeModBuildRoot)' == '' and Exists('$(MSBuildThisFileDirectory)build\DrakeMod.Build.targets')">$(MSBuildThisFileDirectory)build\</DrakeModBuildRoot>
+  </PropertyGroup>
+  <Import Project="$(DrakeModBuildRoot)DrakeMod.Build.targets" Condition="'$(DrakeModBuildRoot)' != ''" />
+  <PropertyGroup Condition="'$(CI_SKIP_POST_BUILD)' != ''">
+    <SkipPackageMod>true</SkipPackageMod>
+  </PropertyGroup>
+</Project>

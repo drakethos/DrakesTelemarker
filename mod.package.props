@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <ThunderstoreName>DrakesTelemarker</ThunderstoreName>
+    <ThunderstoreAuthor>DrakeMods</ThunderstoreAuthor>
+    <RootNamespace>DrakesTelemarker</RootNamespace>
+    <AssemblyName>DrakesTelemarker</AssemblyName>
+    <Version>0.1.0</Version>
+    <BepInPluginName>DrakesTelemarker</BepInPluginName>
+    <BepInGuid>com.drakemods.DrakesTelemarker</BepInGuid>
+    <!-- Generated constants class; the plugin class already defines ModName/Version/GUID itself. -->
+    <ModInfoClass>DrakeModInfo</ModInfoClass>
+    <Description>Per-world console bookmarks (10 slots) to save and recall positions — works with devcommands. Note this is considered a cheat!</Description>
+    <WebsiteUrl>https://github.com/drakethos/DrakesTelemarker</WebsiteUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <ThunderstoreDependency Include="denikson-BepInExPack_Valheim-5.4.2333" />
+    <ThunderstoreDependency Include="ValheimModding-Jotunn-2.26.1" />
+  </ItemGroup>
+</Project>

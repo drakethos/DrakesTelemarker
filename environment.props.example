@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <!-- Copy to environment.props (gitignored). Machine paths only. -->
+    <ValheimGamePath>C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimGamePath>
+    <R2ModPath>C:\Users\YOUR_USER\AppData\Roaming\r2modmanPlus-local\Valheim\profiles</R2ModPath>
+    <!-- Gale: build deploys here when set (same ProfileName as r2). -->
+    <GaleModPath>C:\Users\YOUR_USER\AppData\Roaming\com.kesomannen.gale\valheim\profiles</GaleModPath>
+    <ProfileName>drakeTest</ProfileName>
+
+    <!-- Prefer Gale for local BepInEx refs/logs when you launch with Gale. -->
+    <BepInExPath>$(GaleModPath)\$(ProfileName)\BepInEx</BepInExPath>
+    <BEPINEX_PATH>$(BepInExPath)</BEPINEX_PATH>
+    <VALHEIM_INSTALL>$(ValheimGamePath)</VALHEIM_INSTALL>
+    <CorlibPath>$(ValheimGamePath)\valheim_Data\Managed</CorlibPath>
+    <PublicizedAssembliesPath>$(ValheimGamePath)\valheim_Data\Managed\publicized_assemblies</PublicizedAssembliesPath>
+
+    <AfterTargets>Build</AfterTargets>
+  </PropertyGroup>
+</Project>

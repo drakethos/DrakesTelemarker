@@ -426,3 +426,9 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Per-machine paths (Valheim / r2modman / Gale locations)
+environment.props
+
+# Locally built Thunderstore zips
+*.zip
