@@ -20,6 +20,12 @@ namespace DrakesTelemarker
         private static MethodInfo? GetClosestPinMethod;
         private static MethodInfo? CreateMapNamePinMethod;
 
+        // Valheim 1.0 changed these signatures (ZNet.GetUID became static; AddPin gained a PlatformUserID author).
+        // Resolved by reflection so one build runs on both the 1.0 game and the pre-1.0 CI stubs.
+        private static readonly MethodInfo? ZNetGetUidMethod = AccessTools.Method(typeof(ZNet), "GetUID");
+        private static readonly MethodInfo? MinimapAddPinMethod = FindMinimapAddPin();
+        private static readonly bool AddPinTakesAuthor = MinimapAddPinMethod?.GetParameters().Length == 7;
+
         private static readonly Dictionary<int, Minimap.PinData> TrackedBySlot = new Dictionary<int, Minimap.PinData>();
         private static readonly Sprite?[] SlotSpriteCache = new Sprite[DrakesTelemarkerPlugin.SlotCount + 1];
         private static DrakesTelemarkerPlugin? _plugin;
@@ -129,6 +135,38 @@ namespace DrakesTelemarker
             SyncPins();
         }
 
+        private static MethodInfo? FindMinimapAddPin()
+        {
+            MethodInfo? with7 = AccessTools.Method(typeof(Minimap), "AddPin", new[]
+            {
+                typeof(Vector3), typeof(Minimap.PinType), typeof(string), typeof(bool), typeof(bool),
+                typeof(long), typeof(PlatformUserID),
+            });
+            return with7 ?? AccessTools.Method(typeof(Minimap), "AddPin", new[]
+            {
+                typeof(Vector3), typeof(Minimap.PinType), typeof(string), typeof(bool), typeof(bool), typeof(long),
+            });
+        }
+
+        private static long GetLocalUid()
+        {
+            if (ZNetGetUidMethod == null)
+                return 0;
+            if (ZNetGetUidMethod.IsStatic)
+                return (long)ZNetGetUidMethod.Invoke(null, null)!;
+            return ZNet.instance == null ? 0 : (long)ZNetGetUidMethod.Invoke(ZNet.instance, null)!;
+        }
+
+        private static Minimap.PinData? AddMarkerPin(Minimap mm, Vector3 pos, string label, long owner, PlatformUserID author)
+        {
+            if (MinimapAddPinMethod == null)
+                return null;
+            object[] args = AddPinTakesAuthor
+                ? new object[] { pos, Minimap.PinType.Icon3, label, false, false, owner, author }
+                : new object[] { pos, Minimap.PinType.Icon3, label, false, false, owner };
+            return MinimapAddPinMethod.Invoke(mm, args) as Minimap.PinData;
+        }
+
         internal static void SyncPins()
         {
             if (_plugin == null || Minimap.instance == null)
@@ -147,7 +185,7 @@ namespace DrakesTelemarker
             string path = DrakesTelemarkerPlugin.GetMarksFilePath();
             string worldKey = DrakesTelemarkerPlugin.SanitizeWorldKey(DrakesTelemarkerPlugin.GetWorldKey());
             TelemarkerMarksDocument doc = TelemarkerMarksDocument.Load(path);
-            long owner = ZNet.GetUID();
+            long owner = GetLocalUid();
             PlatformUserID author = default;
 
             for (int slot = 1; slot <= DrakesTelemarkerPlugin.SlotCount; slot++)
@@ -156,7 +194,7 @@ namespace DrakesTelemarker
                     continue;
 
                 string label = $"Mark {slot}";
-                Minimap.PinData? pin = mm.AddPin(pos, Minimap.PinType.Icon3, label, false, false, owner, author);
+                Minimap.PinData? pin = AddMarkerPin(mm, pos, label, owner, author);
                 if (pin == null)
                     continue;
 

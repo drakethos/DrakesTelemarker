@@ -13,7 +13,7 @@
     <WebsiteUrl>https://github.com/drakethos/DrakesTelemarker</WebsiteUrl>
   </PropertyGroup>
   <ItemGroup>
-    <ThunderstoreDependency Include="denikson-BepInExPack_Valheim-5.4.2333" />
-    <ThunderstoreDependency Include="ValheimModding-Jotunn-2.26.1" />
+    <ThunderstoreDependency Include="denikson-BepInExPack_Valheim-5.4.2351" />
+    <ThunderstoreDependency Include="ValheimModding-Jotunn-2.30.2" />
   </ItemGroup>
 </Project>

@@ -7,11 +7,6 @@
   </PropertyGroup>
   <Import Project="$(CI_NET48_FWPATH)/Microsoft.NETFramework.ReferenceAssemblies.net48.targets"
           Condition="'$(CI_NET48_FWPATH)' != '' and Exists('$(CI_NET48_FWPATH)/Microsoft.NETFramework.ReferenceAssemblies.net48.targets')" />
-  <!-- Written against the live Valheim 1.0 API (ZNet.GetUID is static, Minimap.AddPin takes 7 args).
-       The Pfhoenix CI stubs are pre-1.0 and do not compile it, so compile against the live publicized assemblies. -->
-  <PropertyGroup>
-    <UseCiValheimRefs>false</UseCiValheimRefs>
-  </PropertyGroup>
   <PropertyGroup>
     <DrakeModBuildRoot Condition="Exists('$(MSBuildThisFileDirectory)build\DrakeMod.Build.props')">$(MSBuildThisFileDirectory)build\</DrakeModBuildRoot>
   </PropertyGroup>

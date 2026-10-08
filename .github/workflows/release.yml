@@ -1,5 +1,10 @@
 name: Release
 
+# Hexium only (no Thunderstore). Push a tag to release:
+#   Stable: v0.1.0          -> Hexium + GitHub release
+#   Beta:   v0.1.0-beta.1   -> Hexium + GitHub prerelease
+# The tag must match <Version> in mod.package.props, and CHANGELOG.md needs a "## <version>" section.
+
 on:
   push:
     tags:
@@ -32,12 +37,10 @@ jobs:
 
           if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             IS_PRERELEASE=false
-            CHANNEL=stable
-          elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]]; then
+          elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$ ]]; then
             IS_PRERELEASE=true
-            CHANNEL=beta
           else
-            echo "::error::Tag ${TAG} must be vX.Y.Z (stable) or vX.Y.Z-beta.N (Hexium beta)." >&2
+            echo "::error::Tag ${TAG} must be vX.Y.Z (stable) or vX.Y.Z-beta.N / -alpha.N / -rc.N (prerelease)." >&2
             exit 1
           fi
 
@@ -53,26 +56,22 @@ jobs:
           echo "version=$PKG_VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
-          echo "Release version: $PKG_VERSION (${CHANNEL}; mod.package.props)"
+          echo "Release version: $PKG_VERSION (prerelease=$IS_PRERELEASE)"
 
-      # ── Install .NET SDK (Roslyn C#10) ──────────────────────────────────────
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
-      # ── Restore NuGet packages (JotunnLib, HarmonyX, Pfhoenix game refs, net48 ref pack) ──
       - name: Restore NuGet packages
         run: |
           nuget restore DrakesTelemarker.csproj -PackagesDirectory packages
 
       # ── Stage game / BepInEx DLLs from Pfhoenix ─────────────────────────────
-      #
       #  Fake "Valheim install" tree:
       #    ci_valheim/valheim_Data/Managed/          <- CorlibPath
       #      publicized_assemblies/                  <- PublicizedAssembliesPath
       #    ci_valheim/BepInEx/core/                  <- BepInExPath
-      # ────────────────────────────────────────────────────────────────────────
       - name: Stage game DLLs from Pfhoenix package
         run: |
           PFHOENIX_LIB=$(ls -d packages/Pfhoenix.Valheim.ModProjectReferences.*/lib/net46 2>/dev/null | head -1)
@@ -104,10 +103,6 @@ jobs:
 
           echo "VALHEIM_INSTALL=$(pwd)/ci_valheim" >> "$GITHUB_ENV"
 
-      # ── Build (Release) ─────────────────────────────────────────────────────
-      #  Directory.Build.props reads CI_NET48_FWPATH -> net48 ref pack.
-      #  Directory.Build.targets reads CI_SKIP_POST_BUILD -> skips the PowerShell
-      #  zip step; the zip is assembled in the next step.
       - name: Build
         env:
           CI_NET48_FWPATH: ${{ github.workspace }}/packages/Microsoft.NETFramework.ReferenceAssemblies.net48.1.0.3/build
@@ -125,7 +120,7 @@ jobs:
             /t:Build \
             /v:minimal
 
-      # ── Assemble Thunderstore-style zip (same layout as PackageMod) ─────────
+      # Hexium uses the Thunderstore package layout (manifest.json + icon.png + README.md at the root).
       - name: Assemble package
         id: pkg
         run: |
@@ -147,67 +142,86 @@ jobs:
 
           cd "$PKG_DIR" && zip -r "../$ZIP_NAME" . && cd ..
 
+          # Guard: exactly one icon.png at the zip root, 256x256 (store listing icon).
+          ICON_PATHS=$(zipinfo -1 "$ZIP_NAME" | grep -E '(^|/)icon\.png$' || true)
+          ICON_COUNT=$(printf '%s\n' "$ICON_PATHS" | grep -c . || true)
+          if [ "$ICON_COUNT" -ne 1 ] || [ "$ICON_PATHS" != "icon.png" ]; then
+            echo "::error::Package must contain exactly one icon.png at zip root (found $ICON_COUNT):" >&2
+            printf '%s\n' "$ICON_PATHS" >&2
+            exit 1
+          fi
+          python3 - "$ZIP_NAME" <<'PY'
+          import struct, sys, zipfile
+          z = zipfile.ZipFile(sys.argv[1])
+          data = z.read("icon.png")
+          if data[:8] != b"\x89PNG\r\n\x1a\n":
+              raise SystemExit("icon.png is not a PNG")
+          w, h = struct.unpack(">II", data[16:24])
+          if (w, h) != (256, 256):
+              raise SystemExit(f"icon.png must be 256x256, got {w}x{h}")
+          print(f"OK package icon.png {w}x{h} ({len(data)} bytes)")
+          PY
+
           echo "zip=$ZIP_NAME" >> "$GITHUB_OUTPUT"
           ls -lh "$ZIP_NAME"
 
-      - name: Upload zip artifact
+      # Release notes = this version's CHANGELOG.md section, wrapped with install / bug-report info.
+      # The run fails if CHANGELOG.md has no "## <version>" heading, so notes can't be forgotten.
+      - name: Write release notes
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          IS_PRERELEASE: ${{ steps.ver.outputs.is_prerelease }}
+          REPO: ${{ github.repository }}
+        run: |
+          SECTION=$(awk -v v="## ${VERSION}" '
+            $0 == v { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md | sed -e 's/^###/##/')
+          if [ -z "$(printf '%s' "$SECTION" | tr -d '[:space:]')" ]; then
+            echo "::error::CHANGELOG.md has no '## ${VERSION}' section (or it is empty)." >&2
+            exit 1
+          fi
+          {
+            if [ "$IS_PRERELEASE" = "true" ]; then
+              echo "> **Beta build.** Back up your worlds, and please [report bugs](https://github.com/${REPO}/issues) with your \`BepInEx/LogOutput.log\`."
+              echo
+            fi
+            printf '%s\n' "$SECTION"
+            echo
+            echo "## Install"
+            echo "- **Hexium:** https://valheim.hexium.gg/mods/DrakeMods/DrakesTelemarker (dependencies install automatically)."
+            echo "- **Zip below:** use your mod manager's \"Import local mod\" (Gale, r2modman), or extract into \`BepInEx/plugins/DrakeMods-DrakesTelemarker/\`."
+            echo "- Requires devcommands: run \`devcommands\` in the console before using bookmark commands."
+            echo
+            echo "---"
+            echo "Full history: [CHANGELOG.md](https://github.com/${REPO}/blob/${TAG}/CHANGELOG.md) | How to use it: [README](https://github.com/${REPO}/blob/${TAG}/README.md)"
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: "DrakesTelemarker ${{ steps.ver.outputs.version }}${{ steps.ver.outputs.is_prerelease == 'true' && ' (beta)' || '' }}"
+          prerelease: ${{ steps.ver.outputs.is_prerelease == 'true' }}
+          body_path: release-notes.md
+          files: ${{ steps.pkg.outputs.zip }}
+
+      - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
           name: package-zip
           path: ${{ steps.pkg.outputs.zip }}
           if-no-files-found: error
 
-      # ── GitHub Release (stable or beta) ─────────────────────────────────────
-      - name: Create GitHub Release (stable)
-        if: steps.ver.outputs.is_prerelease != 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.ver.outputs.tag }}
-          name: "DrakesTelemarker ${{ steps.ver.outputs.version }}"
-          prerelease: false
-          body: |
-            ## DrakesTelemarker v${{ steps.ver.outputs.version }}
-
-            Zip attached. CI also publishes it to **Hexium**.
-
-            ### Install
-            Drop the zip into **Gale**, **r2modman** or **Thunderstore Mod Manager** via "Import local mod", or extract into:
-            ```
-            BepInEx/plugins/DrakeMods-DrakesTelemarker/
-            ```
-
-            **Requires devcommands** - run `devcommands` in the console before using bookmark commands.
-
-            ---
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.ver.outputs.tag }}/CHANGELOG.md) for what's new.
-          files: ${{ steps.pkg.outputs.zip }}
-
-      - name: Create GitHub Release (beta)
-        if: steps.ver.outputs.is_prerelease == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.ver.outputs.tag }}
-          name: "DrakesTelemarker ${{ steps.ver.outputs.version }} (beta)"
-          prerelease: true
-          body: |
-            ## DrakesTelemarker v${{ steps.ver.outputs.version }} (beta)
-
-            Beta build. Published to **Hexium** only (not a stable store release).
-
-            ### Install
-            Drop the zip into **Gale**, **r2modman** or **Thunderstore Mod Manager** via "Import local mod", or extract into:
-            ```
-            BepInEx/plugins/DrakeMods-DrakesTelemarker/
-            ```
-
-            ---
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.ver.outputs.tag }}/CHANGELOG.md) for the full list.
-          files: ${{ steps.pkg.outputs.zip }}
-
-  # ── Hexium (stable + beta). publish-hexium.py accepts -beta.N versions. ──
   publish-hexium:
     needs: build-and-release
-    if: needs.build-and-release.result == 'success'
+    # Kill switch: repo variable HEXIUM_PUBLISH=false skips the upload (GitHub release still made),
+    # e.g. for a manual first upload. Unset or any other value publishes.
+    #   gh variable set HEXIUM_PUBLISH --body false   /   gh variable delete HEXIUM_PUBLISH
+    if: vars.HEXIUM_PUBLISH != 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout publish script
@@ -219,6 +233,7 @@ jobs:
           name: package-zip
           path: dist
 
+      # publish-hexium.py (not tcli) so Hexium can receive -beta.N versions.
       - name: Publish package to Hexium
         env:
           HEXIUM_TOKEN: ${{ secrets.HEXIUM_TOKEN }}
