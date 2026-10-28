@@ -4,7 +4,7 @@
     <ThunderstoreAuthor>DrakeMods</ThunderstoreAuthor>
     <RootNamespace>DrakesTelemarker</RootNamespace>
     <AssemblyName>DrakesTelemarker</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <BepInPluginName>DrakesTelemarker</BepInPluginName>
     <BepInGuid>com.drakemods.DrakesTelemarker</BepInGuid>
     <!-- Generated constants class; the plugin class already defines ModName/Version/GUID itself. -->

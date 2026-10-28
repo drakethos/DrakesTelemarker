@@ -1,12 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
-### Fixed
-
-- Packaging only: the Hexium/Thunderstore zip now puts the DLL and every data folder under `plugins/`, so Gale and r2modman
-  keep the folder structure (they flatten anything outside `plugins/`). A CI guard (`check-gale-layout.py`) fails the build
-  if that ever regresses. No code or behaviour change for players.
+- **Packaging fix:** the zip now ships the DLL under `plugins/` so Gale and r2modman keep the folder layout (they flatten anything outside `plugins/`). A build guard (`check-gale-layout.py`) fails the release if that regresses. No code or gameplay change.
 
 ## 0.1.0
 - Initial release.
